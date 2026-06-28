@@ -1,0 +1,65 @@
+{
+  "realm": "tradedigital",
+  "enabled": true,
+  "displayName": "TradeDigital",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "clients": [
+    {
+      "clientId": "tradedigital-web",
+      "name": "TradeDigital Web",
+      "enabled": true,
+      "publicClient": false,
+      "secret": "change-this-client-secret",
+      "protocol": "openid-connect",
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": [
+        "http://127.0.0.1:8000/api/v1/auth/sso/callback",
+        "http://localhost:8000/api/v1/auth/sso/callback"
+      ],
+      "webOrigins": [
+        "http://127.0.0.1:5173",
+        "http://localhost:5173"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256"
+      }
+    }
+  ],
+  "users": [
+    {
+      "username": "admin@tradedigital.local",
+      "email": "admin@tradedigital.local",
+      "firstName": "TradeDigital",
+      "lastName": "Admin",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Admin@123456",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "username": "employee@tradedigital.local",
+      "email": "employee@tradedigital.local",
+      "firstName": "TradeDigital",
+      "lastName": "Employee",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Employee@123456",
+          "temporary": false
+        }
+      ]
+    }
+  ]
+}

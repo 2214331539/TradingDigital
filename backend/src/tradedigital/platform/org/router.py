@@ -1,0 +1,205 @@
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
+
+from tradedigital.core.database import get_session
+from tradedigital.platform.audit.service import write_context_audit_log
+from tradedigital.platform.iam.deps import require_permission
+from tradedigital.platform.iam.models import Role
+from tradedigital.platform.iam.repository import (
+    get_user_with_roles,
+    list_permissions,
+    list_roles,
+)
+from tradedigital.platform.iam.schemas import (
+    RoleCreate,
+    RolePermissionsUpdate,
+    RoleUpdate,
+    UserRolesUpdate,
+    UserStatusUpdate,
+)
+from tradedigital.platform.iam.service import (
+    assign_roles_to_user,
+    list_users,
+    permission_out,
+    role_out,
+    update_role_permissions,
+    update_user_status,
+    user_out,
+)
+from tradedigital.platform.org.repository import get_enterprise
+from tradedigital.platform.org.service import enterprise_out
+from tradedigital.shared.auth_context import AuthContext
+from tradedigital.shared.types import ok
+
+router = APIRouter()
+
+
+@router.get("/enterprises/current")
+async def current_enterprise(
+    ctx: AuthContext = Depends(require_permission("platform.admin.access")),
+    session: AsyncSession = Depends(get_session),
+):
+    enterprise = await get_enterprise(session, ctx.enterprise_id)
+    if not enterprise:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Enterprise not found")
+    return ok(enterprise_out(enterprise))
+
+
+@router.get("/users")
+async def users(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    keyword: str = "",
+    ctx: AuthContext = Depends(require_permission("iam.user.read")),
+    session: AsyncSession = Depends(get_session),
+):
+    rows, total = await list_users(session, ctx.enterprise_id, page=page, page_size=page_size, keyword=keyword)
+    return ok({"items": [user_out(row) for row in rows], "page": page, "page_size": page_size, "total": total})
+
+
+@router.get("/users/{user_id}")
+async def user_detail(
+    user_id: str,
+    ctx: AuthContext = Depends(require_permission("iam.user.read")),
+    session: AsyncSession = Depends(get_session),
+):
+    user = await get_user_with_roles(session, user_id)
+    if not user or user.enterprise_id != ctx.enterprise_id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    return ok(user_out(user))
+
+
+@router.patch("/users/{user_id}/status")
+async def set_user_status(
+    user_id: str,
+    payload: UserStatusUpdate,
+    ctx: AuthContext = Depends(require_permission("iam.user.manage")),
+    session: AsyncSession = Depends(get_session),
+):
+    try:
+        user = await update_user_status(session, ctx, user_id, payload.status)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    await session.commit()
+    return ok(user_out(user))
+
+
+@router.patch("/users/{user_id}/roles")
+async def set_user_roles(
+    user_id: str,
+    payload: UserRolesUpdate,
+    ctx: AuthContext = Depends(require_permission("iam.user.manage")),
+    session: AsyncSession = Depends(get_session),
+):
+    try:
+        user = await assign_roles_to_user(session, ctx, user_id, payload.role_ids)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    await session.commit()
+    return ok(user_out(user))
+
+
+@router.get("/roles")
+async def roles(
+    ctx: AuthContext = Depends(require_permission("iam.role.read")),
+    session: AsyncSession = Depends(get_session),
+):
+    rows = await list_roles(session, ctx.enterprise_id)
+    return ok([role_out(row) for row in rows])
+
+
+@router.post("/roles")
+async def create_role(
+    payload: RoleCreate,
+    ctx: AuthContext = Depends(require_permission("iam.role.manage")),
+    session: AsyncSession = Depends(get_session),
+):
+    existing_role = await session.scalar(
+        select(Role).where(Role.enterprise_id == ctx.enterprise_id, Role.code == payload.code)
+    )
+    if existing_role:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Role code already exists")
+    role = Role(
+        id=payload.code,
+        enterprise_id=ctx.enterprise_id,
+        code=payload.code,
+        name=payload.name,
+        description=payload.description,
+        is_system=False,
+    )
+    session.add(role)
+    await session.flush()
+    await write_context_audit_log(
+        session,
+        ctx,
+        module="iam",
+        action="iam.role.create",
+        resource_type="iam_role",
+        resource_id=role.id,
+        detail_json={"code": role.code, "name": role.name},
+    )
+    await session.commit()
+    role = await session.scalar(
+        select(Role).options(selectinload(Role.permissions)).where(Role.id == role.id)
+    )
+    if not role:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Role unavailable")
+    return ok(role_out(role))
+
+
+@router.patch("/roles/{role_id}")
+async def update_role(
+    role_id: str,
+    payload: RoleUpdate,
+    ctx: AuthContext = Depends(require_permission("iam.role.manage")),
+    session: AsyncSession = Depends(get_session),
+):
+    role = await session.scalar(
+        select(Role)
+        .options(selectinload(Role.permissions))
+        .where(Role.enterprise_id == ctx.enterprise_id, Role.id == role_id)
+    )
+    if not role:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Role not found")
+    updates = payload.model_dump(exclude_unset=True)
+    if "name" in updates and updates["name"] is None:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="角色名称不能为空")
+    for key, value in updates.items():
+        setattr(role, key, value)
+    await write_context_audit_log(
+        session,
+        ctx,
+        module="iam",
+        action="iam.role.update",
+        resource_type="iam_role",
+        resource_id=role.id,
+        detail_json=updates,
+    )
+    await session.commit()
+    return ok(role_out(role))
+
+
+@router.patch("/roles/{role_id}/permissions")
+async def set_role_permissions(
+    role_id: str,
+    payload: RolePermissionsUpdate,
+    ctx: AuthContext = Depends(require_permission("iam.role.manage")),
+    session: AsyncSession = Depends(get_session),
+):
+    try:
+        role = await update_role_permissions(session, ctx, role_id, payload.permission_ids)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    await session.commit()
+    return ok(role_out(role))
+
+
+@router.get("/permissions")
+async def permissions(
+    ctx: AuthContext = Depends(require_permission("iam.permission.read")),
+    session: AsyncSession = Depends(get_session),
+):
+    rows = await list_permissions(session)
+    return ok([permission_out(row) for row in rows])

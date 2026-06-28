@@ -1,84 +1,67 @@
-# ChatAI
+# TradeDigital
 
-ChatAI 是一个 React + TypeScript 前端、Python + FastAPI 后端的 ChatGPT 风格 Web 对话项目。
+TradeDigital（电商数字化）是一个企业数字化平台。当前版本包含平台底座、`llm` 模型对话模块、KnowledgeBase 知识库模块骨架。
 
-第一版已实现开发骨架和主流程：
+## 技术栈
 
-- ChatGPT 风格用户端布局：侧边栏、会话列表、模型选择、底部输入框、消息流。
-- 用户登录和 JWT 认证。
-- 会话列表、会话详情、会话删除、归档、收藏。
-- SSE 流式聊天接口。
-- 默认 mock 模型，未配置真实模型 API 时也能本地演示。
-- 管理后台：用户、角色、模型、统计、操作日志基础页面。
-- RBAC 权限：超级管理员、管理员、普通用户。
+- 前端：React + TypeScript + Vite
+- 后端：Python + FastAPI + SQLAlchemy Async
+- 数据库：PostgreSQL
+- 认证：Keycloak OIDC SSO + 服务端 Session
+- 模型：OpenAI Compatible API
 
-## 启动后端
+## 本地启动
 
 ```bash
-cd backend
-uv sync
-uv run uvicorn app.main:app --host 127.0.0.1 --port 8000
+./start.sh
 ```
 
-后端地址：
+启动后访问：
 
 ```text
-http://127.0.0.1:8000
+前端：http://127.0.0.1:5173
+后端：http://127.0.0.1:8000
+API 文档：http://127.0.0.1:8000/docs
+Keycloak：http://127.0.0.1:8080
+PostgreSQL：127.0.0.1:55433
 ```
 
-OpenAPI：
+本地 PostgreSQL 默认映射到宿主机 `55433`，避免和已有本机 PostgreSQL 的 `5432` 冲突。如需自定义：`POSTGRES_HOST_PORT=55434 ./start.sh`。
 
-```text
-http://127.0.0.1:8000/docs
-```
-
-## 启动前端
-
-```bash
-cd frontend
-npm install
-npm run dev -- --host 127.0.0.1 --port 5173
-```
-
-前端地址：
-
-```text
-http://127.0.0.1:5173
-```
-
-## 默认账号
+开发账号：
 
 |角色|邮箱|密码|
 |---|---|---|
-|超级管理员|`superadmin@chatai.local`|`ChatAI@123456`|
-|管理员|`admin@chatai.local`|`Admin@123456`|
-|普通用户|`user@chatai.local`|`User@123456`|
+|企业管理员|admin@tradedigital.local|Admin@123456|
+|员工|employee@tradedigital.local|Employee@123456|
 
-## 模型 API 配置
-
-默认模型为 `mock`，无需 API Key。
-
-后续接真实 OpenAI-compatible API 时，可在后台新增模型，配置：
-
-- Provider：`openai_compatible`
-- Base URL：例如 `https://api.example.com/v1`
-- API Key Ref：例如 `OPENAI_API_KEY`
-
-然后在后端环境变量中设置：
+## 手动启动
 
 ```bash
-export OPENAI_API_KEY="your-key"
-export CHATAI_MOCK_MODEL_ENABLED=false
+cd infra
+docker compose up -d
+
+cd ../backend
+cp .env.example .env
+uv run alembic upgrade head
+uv run python -m tradedigital.scripts.seed
+uv run uvicorn tradedigital.main:app --reload --host 127.0.0.1 --port 8000
+
+cd ../frontend
+npm install
+npm run dev
 ```
 
-## 主要目录
+## 验证
 
-```text
-DOC/                 产品与研发文档
-frontend/            React + TypeScript 前端
-backend/             FastAPI 后端
-backend/app/api/     REST 与 SSE 接口
-backend/app/db/      SQLAlchemy 数据模型
-backend/app/seed/    初始化角色、权限、账号、模型
+```bash
+cd backend
+uv run ruff check .
+uv run pytest
+
+cd ../frontend
+npm run lint
+npm run build
 ```
 
+详细架构与开发文档见 [DOC/00-文档索引.md](./DOC/00-文档索引.md)。

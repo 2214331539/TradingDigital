@@ -11,6 +11,9 @@ backend/__pycache__/
 backend/**/__pycache__/
 backend/*.db
 backend/.env
+backend/.pytest_cache/
+backend/.ruff_cache/
+backend/src/*.egg-info/
 
 # runtime
 .runtime/

@@ -1,0 +1,2 @@
+"""KnowledgeBase application module."""
+
