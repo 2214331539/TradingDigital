@@ -604,6 +604,7 @@
 }
 
 .chat-main.is-empty .message-scroll {
+  overflow: hidden;
   padding: 0 18px 280px;
 }
 
@@ -1747,8 +1748,7 @@ tr:last-child td {
   flex: 0 0 auto;
 }
 
-.model-selector,
-.preset-selector {
+.model-selector {
   position: relative;
   display: inline-flex;
   align-items: center;
@@ -1759,26 +1759,16 @@ tr:last-child td {
   color: var(--muted);
 }
 
-.model-selector:hover,
-.preset-selector:hover {
+.model-selector:hover {
   background: var(--hover);
   color: var(--text);
 }
 
-.model-selector select,
-.preset-selector select {
+.model-selector select {
   position: absolute;
   inset: 0;
   opacity: 0;
   cursor: pointer;
-}
-
-.preset-selector {
-  min-width: 88px;
-}
-
-.preset-selector::before {
-  content: "Preset";
 }
 
 .forbidden-page,
@@ -1977,7 +1967,6 @@ td select,
     white-space: nowrap;
   }
 
-  .llm-page .preset-selector,
   .llm-page .temp-chip {
     display: none;
   }

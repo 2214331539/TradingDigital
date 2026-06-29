@@ -1,10 +1,9 @@
 import { Archive, Image, MoreHorizontal, PanelLeftOpen, PenLine, Pin, Search, Share, Trash2, X } from 'lucide-react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   createProject,
   deleteConversation,
   getConversation,
-  listAssistantPresets,
   listConversations,
   listModels,
   listProjects,
@@ -18,7 +17,7 @@ import { ChatMessageList } from '../components/ChatMessageList'
 import { ChatSidebar } from '../components/ChatSidebar'
 import { ModelSelector } from '../components/ModelSelector'
 import { ThemeToggle } from '../../../shared/components/ThemeToggle'
-import type { AssistantPreset, Conversation, LlmProject, Message, ModelInfo } from '../../../shared/types'
+import type { Conversation, LlmProject, Message, ModelInfo } from '../../../shared/types'
 
 export function LlmPage() {
   const { auth, logout } = useAuth()
@@ -26,12 +25,9 @@ export function LlmPage() {
   const [current, setCurrent] = useState<Conversation | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
   const [models, setModels] = useState<ModelInfo[]>([])
-  const [presets, setPresets] = useState<AssistantPreset[]>([])
   const [projects, setProjects] = useState<LlmProject[]>([])
   const [selectedModel, setSelectedModel] = useState<string | null>(null)
-  const [selectedPreset, setSelectedPreset] = useState<string | null>(null)
   const [activeProjectId, setActiveProjectId] = useState<string | null>(null)
-  const [temporary, setTemporary] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(() => window.innerWidth > 980)
   const [input, setInput] = useState('')
   const [search, setSearch] = useState('')
@@ -46,10 +42,6 @@ export function LlmPage() {
     listModels().then((rows) => {
       setModels(rows)
       setSelectedModel(rows.find((row) => row.is_default)?.id ?? rows[0]?.id ?? null)
-    })
-    listAssistantPresets().then((rows) => {
-      setPresets(rows)
-      setSelectedPreset(rows[0]?.id ?? null)
     })
   }, [])
 
@@ -77,9 +69,7 @@ export function LlmPage() {
     setCurrent(detail)
     setMessages(detail.messages)
     setSelectedModel(detail.model_id)
-    setSelectedPreset(detail.assistant_preset_id)
     setActiveProjectId(detail.project_id)
-    setTemporary(detail.temporary)
     if (window.innerWidth <= 980) setSidebarOpen(false)
   }
 
@@ -88,7 +78,6 @@ export function LlmPage() {
     setMessages([])
     setInput('')
     setError('')
-    setTemporary(false)
     if (window.innerWidth <= 980) setSidebarOpen(false)
   }
 
@@ -103,10 +92,8 @@ export function LlmPage() {
       {
         conversation_id: current?.id,
         model_id: selectedModel,
-        assistant_preset_id: selectedPreset,
         project_id: current?.project_id ?? activeProjectId,
         content,
-        temporary,
       },
       {
         onEvent(event, data) {
@@ -234,17 +221,15 @@ export function LlmPage() {
     await sendContent(previousUser.content)
   }
 
-  const filtered = useMemo(() => {
-    if (!activeProjectId) return conversations
-    return conversations.filter((conversation) => conversation.project_id === activeProjectId)
-  }, [activeProjectId, conversations])
-
+  // The sidebar always shows the full set: pinned, each project with its nested
+  // chats, and the "Chats" list (conversations without a project). The active
+  // project only decides where a new chat is saved — it must not hide history.
   const activeProject = projects.find((project) => project.id === activeProjectId)
 
   return (
     <div className="chat-layout llm-page" data-sidebar={sidebarOpen ? 'open' : 'closed'}>
       <ChatSidebar
-        conversations={filtered}
+        conversations={conversations}
         projects={projects}
         currentId={current?.id ?? null}
         search={search}
@@ -270,20 +255,7 @@ export function LlmPage() {
             </button>
           </div>
           <ModelSelector models={models} selectedModel={selectedModel} onSelect={setSelectedModel} />
-          <label className="preset-selector">
-            <select
-              value={selectedPreset ?? ''}
-              onChange={(event) => setSelectedPreset(event.target.value || null)}
-            >
-              {presets.map((preset) => (
-                <option key={preset.id} value={preset.id}>
-                  {preset.name}
-                </option>
-              ))}
-            </select>
-          </label>
           {activeProject ? <span className="temp-chip">{activeProject.name}</span> : null}
-          {temporary ? <span className="temp-chip">Temporary</span> : null}
           {current ? (
             <div className="header-actions">
               <ThemeToggle />
@@ -307,9 +279,6 @@ export function LlmPage() {
           ) : (
             <div className="header-actions">
               <ThemeToggle />
-              <button className="ghost-button" onClick={() => setTemporary((value) => !value)}>
-                {temporary ? 'Temporary on' : 'Temporary'}
-              </button>
               <button className="share-button" title="分享">
                 <Share size={16} />
                 Share
