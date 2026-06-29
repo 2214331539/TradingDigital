@@ -39,6 +39,7 @@ async def get_accessible_knowledge_base(
         select(KnowledgeBase).where(
             KnowledgeBase.id == kb_id,
             KnowledgeBase.enterprise_id == ctx.enterprise_id,
+            KnowledgeBase.status != "deleted",
             knowledge_access_clause(ctx),
         )
     )

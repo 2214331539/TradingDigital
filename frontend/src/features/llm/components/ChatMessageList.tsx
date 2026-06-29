@@ -19,9 +19,13 @@ export function ChatMessageList({
   const [copiedId, setCopiedId] = useState<string | null>(null)
 
   async function copyMessage(message: Message) {
-    await navigator.clipboard.writeText(message.content)
-    setCopiedId(message.id)
-    window.setTimeout(() => setCopiedId(null), 1200)
+    try {
+      await navigator.clipboard.writeText(message.content)
+      setCopiedId(message.id)
+      window.setTimeout(() => setCopiedId(null), 1200)
+    } catch {
+      // Clipboard API unavailable (e.g. non-secure context) — ignore.
+    }
   }
 
   if (messages.length === 0) {

@@ -1,5 +1,6 @@
 import { ClipboardList, Home, UsersRound } from 'lucide-react'
 import { NavLink, Outlet } from 'react-router-dom'
+import { ThemeToggle } from '../../shared/components/ThemeToggle'
 
 export function AdminLayout() {
   return (
@@ -25,6 +26,8 @@ export function AdminLayout() {
           <ClipboardList size={18} />
           审计日志
         </NavLink>
+        <div className="admin-spacer" />
+        <ThemeToggle className="admin-nav" />
       </aside>
       <main className="admin-main">
         <Outlet />

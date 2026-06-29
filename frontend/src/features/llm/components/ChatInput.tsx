@@ -1,5 +1,6 @@
 import { AudioLines, ChevronDown, Mic, Plus, Send, Square } from 'lucide-react'
-import type { ChangeEvent, KeyboardEvent } from 'react'
+import { useEffect, useRef } from 'react'
+import type { KeyboardEvent } from 'react'
 
 export function ChatInput({
   value,
@@ -14,17 +15,22 @@ export function ChatInput({
   onSend: () => void
   onStop: () => void
 }) {
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  // Auto-resize whenever the (controlled) value changes — including when the
+  // parent clears it after sending, so the box collapses back to one row.
+  useEffect(() => {
+    const textarea = textareaRef.current
+    if (!textarea) return
+    textarea.style.height = 'auto'
+    textarea.style.height = `${Math.min(textarea.scrollHeight, 180)}px`
+  }, [value])
+
   function onKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
     if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault()
       onSend()
     }
-  }
-
-  function onInput(event: ChangeEvent<HTMLTextAreaElement>) {
-    onChange(event.target.value)
-    event.target.style.height = 'auto'
-    event.target.style.height = `${Math.min(event.target.scrollHeight, 180)}px`
   }
 
   return (
@@ -33,10 +39,11 @@ export function ChatInput({
         <Plus size={20} />
       </button>
       <textarea
+        ref={textareaRef}
         value={value}
         placeholder="Ask anything"
         rows={1}
-        onChange={onInput}
+        onChange={(event) => onChange(event.target.value)}
         onKeyDown={onKeyDown}
       />
       <div className="composer-tools">

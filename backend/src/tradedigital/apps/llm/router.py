@@ -227,12 +227,15 @@ async def update_conversation(
     if not conversation:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="会话不存在")
     updates = payload.model_dump(exclude_unset=True)
-    if "model_id" in updates and updates["model_id"]:
-        model = await get_accessible_model(session, ctx, updates["model_id"])
-        if not model:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="无权使用该模型")
-        updates["model_id"] = model.id
-    if "assistant_preset_id" in updates and updates["assistant_preset_id"]:
+    if "model_id" in updates:
+        if updates["model_id"]:
+            model = await get_accessible_model(session, ctx, updates["model_id"])
+            if not model:
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="无权使用该模型")
+            updates["model_id"] = model.id
+        else:
+            updates["model_id"] = None
+    if "assistant_preset_id" in updates:
         updates["assistant_preset_id"] = await resolve_assistant_preset_id(
             session, ctx, updates["assistant_preset_id"]
         )
@@ -307,7 +310,12 @@ async def stream_chat(
     if conversation.title == "新聊天":
         conversation.title = content[:28]
 
-    context = build_context(previous_messages, content)
+    system_prompt: str | None = None
+    if conversation.assistant_preset_id:
+        preset = await get_accessible_preset(session, ctx, conversation.assistant_preset_id)
+        if preset:
+            system_prompt = preset.system_prompt
+    context = build_context(previous_messages, content, system_prompt)
     user_message = Message(
         enterprise_id=ctx.enterprise_id,
         conversation_id=conversation.id,

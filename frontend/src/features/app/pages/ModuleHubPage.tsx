@@ -1,6 +1,7 @@
 import { ArrowRight, BookOpen, Bot, Building2, LogOut } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../../app/providers/auth-context'
+import { ThemeToggle } from '../../../shared/components/ThemeToggle'
 
 type ModuleCard = {
   title: string
@@ -51,6 +52,7 @@ export function ModuleHubPage() {
             <strong>{auth?.user.name ?? auth?.user.email}</strong>
             <small>{auth?.enterprise.name}</small>
           </span>
+          <ThemeToggle />
           <button className="icon-button" onClick={logout} title="退出登录">
             <LogOut size={17} />
           </button>

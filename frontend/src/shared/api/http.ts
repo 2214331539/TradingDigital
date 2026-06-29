@@ -17,9 +17,16 @@ export async function request<T>(path: string, init: RequestInit = {}): Promise<
   })
 
   const text = await response.text()
-  const payload = text ? (JSON.parse(text) as ApiResponse<T>) : null
+  let payload: ApiResponse<T> | null = null
+  if (text) {
+    try {
+      payload = JSON.parse(text) as ApiResponse<T>
+    } catch {
+      payload = null
+    }
+  }
   if (!response.ok) {
-    throw new Error(payload?.message || payload?.code || response.statusText)
+    throw new Error(payload?.message || payload?.code || text || response.statusText)
   }
   return payload?.data as T
 }

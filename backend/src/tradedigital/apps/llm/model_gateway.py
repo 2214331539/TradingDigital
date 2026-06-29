@@ -23,14 +23,23 @@ def get_api_key(api_key_ref: str) -> Optional[str]:
     return os.getenv(api_key_ref) or local_env_values().get(api_key_ref)
 
 
-def build_context(messages: Iterable[Message], new_content: str) -> list[dict[str, str]]:
-    context = [
+def build_context(
+    messages: Iterable[Message],
+    new_content: str,
+    system_prompt: Optional[str] = None,
+) -> list[dict[str, str]]:
+    history = [
         {"role": message.role, "content": message.content}
         for message in messages
-        if message.role in {"system", "user", "assistant"} and not message.deleted_at
+        if message.role in {"user", "assistant"} and not message.deleted_at
     ]
-    context.append({"role": "user", "content": new_content})
-    return context[-20:]
+    history.append({"role": "user", "content": new_content})
+    # Keep the most recent turns, but never drop the assistant preset's system
+    # prompt — it is prepended after the window is applied.
+    history = history[-20:]
+    if system_prompt and system_prompt.strip():
+        return [{"role": "system", "content": system_prompt}, *history]
+    return history
 
 
 async def openai_compatible_stream(

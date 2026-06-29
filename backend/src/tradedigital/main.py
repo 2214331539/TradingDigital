@@ -31,7 +31,7 @@ app = create_app()
 async def unhandled_exception_handler(request: Request, exc: Exception):
     return JSONResponse(
         status_code=500,
-        content={"code": "INTERNAL_ERROR", "message": "服务器内部错误", "details": None},
+        content={"code": "INTERNAL_ERROR", "message": "服务器内部错误", "data": None},
     )
 
 

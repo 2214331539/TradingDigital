@@ -102,6 +102,11 @@ async def exchange_code_for_claims(
 
 def frontend_redirect_url(path: str) -> str:
     settings = get_settings()
-    if path.startswith("http://") or path.startswith("https://"):
-        return path
-    return settings.frontend_url.rstrip("/") + "/" + path.lstrip("/")
+    base = settings.frontend_url.rstrip("/")
+    # Only allow same-origin relative paths to avoid open-redirect attacks via
+    # the attacker-controlled ``redirect_after_login`` query parameter.
+    # Reject absolute URLs ("https://evil.com"), scheme-relative URLs ("//evil.com"),
+    # and anything that does not start with a single "/".
+    if not path or not path.startswith("/") or path.startswith("//"):
+        return base + "/app"
+    return base + "/" + path.lstrip("/")

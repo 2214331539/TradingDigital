@@ -17,6 +17,7 @@ import { ChatInput } from '../components/ChatInput'
 import { ChatMessageList } from '../components/ChatMessageList'
 import { ChatSidebar } from '../components/ChatSidebar'
 import { ModelSelector } from '../components/ModelSelector'
+import { ThemeToggle } from '../../../shared/components/ThemeToggle'
 import type { AssistantPreset, Conversation, LlmProject, Message, ModelInfo } from '../../../shared/types'
 
 export function LlmPage() {
@@ -285,6 +286,7 @@ export function LlmPage() {
           {temporary ? <span className="temp-chip">Temporary</span> : null}
           {current ? (
             <div className="header-actions">
+              <ThemeToggle />
               <button className="share-button" title="分享">
                 <Share size={16} />
                 Share
@@ -304,6 +306,7 @@ export function LlmPage() {
             </div>
           ) : (
             <div className="header-actions">
+              <ThemeToggle />
               <button className="ghost-button" onClick={() => setTemporary((value) => !value)}>
                 {temporary ? 'Temporary on' : 'Temporary'}
               </button>

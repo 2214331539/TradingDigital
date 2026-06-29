@@ -96,7 +96,9 @@
 .admin-layout {
   width: 100%;
   height: 100vh;
+  height: 100dvh;
   min-height: 100vh;
+  min-height: 100dvh;
 }
 
 .chat-layout {
@@ -597,6 +599,7 @@
 .message-scroll {
   min-height: 0;
   overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 42px 18px 184px;
 }
 
@@ -925,16 +928,16 @@
   place-items: center;
   border: 0;
   border-radius: 50%;
-  background: #f4f4f4;
-  color: #0d0d0d;
+  background: var(--send-bg);
+  color: var(--send-fg);
   cursor: pointer;
 }
 
 .send-button:disabled {
-  background: #f4f4f4;
-  color: #0d0d0d;
+  background: var(--send-bg);
+  color: var(--send-fg);
   cursor: default;
-  opacity: 1;
+  opacity: 0.55;
 }
 
 .composer-note {
@@ -1475,7 +1478,12 @@ tr:last-child td {
     overflow: auto;
   }
 
+  /* The chat workspace owns the full viewport and scrolls internally
+     (only .message-scroll scrolls), so the composer stays pinned to the
+     visual bottom instead of letting the whole page scroll behind it. */
   .chat-layout {
+    height: 100dvh;
+    overflow: hidden;
     grid-template-columns: minmax(0, 1fr);
   }
 
@@ -1496,7 +1504,8 @@ tr:last-child td {
   }
 
   .chat-main {
-    min-height: 100vh;
+    height: 100%;
+    min-height: 0;
   }
 
   .mobile-menu {
@@ -1594,7 +1603,7 @@ tr:last-child td {
   grid-template-rows: auto minmax(0, 1fr);
   gap: 44px;
   padding: 28px clamp(22px, 4vw, 56px) 56px;
-  background: #0b0b0b;
+  background: var(--module-bg);
 }
 
 .module-hub-header {
@@ -1687,13 +1696,13 @@ tr:last-child td {
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 18px;
-  background: #111111;
+  background: var(--module-card);
   color: var(--text);
   text-decoration: none;
 }
 
 .module-card:hover {
-  background: #171717;
+  background: var(--module-card-hover);
   border-color: var(--border-strong);
 }
 
@@ -1725,6 +1734,7 @@ tr:last-child td {
 
 .llm-page {
   height: 100vh;
+  height: 100dvh;
   min-height: 0;
   grid-template-columns: 306px minmax(0, 1fr);
 }
@@ -1988,7 +1998,7 @@ td select,
     flex: 0 0 auto;
   }
 
-  .llm-page .header-actions .icon-button:not(:last-child) {
+  .llm-page .header-actions .icon-button:not(:last-child):not(.theme-toggle) {
     display: none;
   }
 }
