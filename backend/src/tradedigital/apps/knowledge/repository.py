@@ -11,7 +11,7 @@ def knowledge_access_clause(ctx: AuthContext):
         exists().where(
             and_(
                 kb_role_grants.c.knowledge_base_id == KnowledgeBase.id,
-                kb_role_grants.c.role_id.in_(ctx.roles),
+                kb_role_grants.c.role_id.in_(ctx.role_ids),
             )
         ),
     )
@@ -56,7 +56,7 @@ async def get_accessible_tool(session: AsyncSession, ctx: AuthContext, tool_code
                 exists().where(
                     and_(
                         kb_tool_role_grants.c.tool_id == Tool.id,
-                        kb_tool_role_grants.c.role_id.in_(ctx.roles),
+                        kb_tool_role_grants.c.role_id.in_(ctx.role_ids),
                     )
                 ),
             ),

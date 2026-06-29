@@ -25,6 +25,10 @@ def role_codes(user: User) -> list[str]:
     return [role.code for role in user.roles]
 
 
+def role_ids(user: User) -> list[str]:
+    return [role.id for role in user.roles]
+
+
 def permission_codes(user: User) -> list[str]:
     codes: set[str] = set()
     for role in user.roles:
@@ -88,6 +92,7 @@ async def build_auth_context(session: AsyncSession, session_token: str) -> AuthC
         email=user.email,
         name=user.name,
         roles=role_codes(user),
+        role_ids=role_ids(user),
         permissions=permission_codes(user),
     )
 

@@ -19,7 +19,7 @@ def model_access_clause(ctx: AuthContext):
         exists().where(
             and_(
                 llm_model_role_grants.c.model_id == LlmModel.id,
-                llm_model_role_grants.c.role_id.in_(ctx.roles),
+                llm_model_role_grants.c.role_id.in_(ctx.role_ids),
             )
         ),
     )

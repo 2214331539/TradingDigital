@@ -9,5 +9,6 @@ class AuthContext:
     email: str
     name: Optional[str]
     roles: list[str]
+    role_ids: list[str]
     permissions: list[str]
 

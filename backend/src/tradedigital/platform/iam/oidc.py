@@ -9,6 +9,7 @@ from joserfc.errors import JoseError
 from starlette.responses import RedirectResponse
 
 from tradedigital.core.config import get_settings
+from tradedigital.core.crypto import decrypt_secret
 from tradedigital.core.security import code_challenge, generate_code_verifier, generate_nonce, generate_state
 from tradedigital.core.time import utc_now
 from tradedigital.platform.iam.models import AuthState, SSOConnection
@@ -69,7 +70,7 @@ async def exchange_code_for_claims(
     metadata = await discover_oidc(connection.issuer_url)
     client = AsyncOAuth2Client(
         client_id=connection.client_id,
-        client_secret=connection.client_secret_encrypted,
+        client_secret=decrypt_secret(connection.client_secret_encrypted),
         redirect_uri=connection.redirect_uri,
         scope="openid email profile",
         trust_env=False,

@@ -5,6 +5,7 @@ from sqlalchemy import delete, insert, select
 
 from tradedigital.apps.llm.models import AssistantPreset, LlmModel, llm_model_role_grants
 from tradedigital.core.config import get_settings
+from tradedigital.core.crypto import encrypt_secret
 from tradedigital.core.database import AsyncSessionLocal, engine
 from tradedigital.core.time import utc_now
 from tradedigital.platform.iam.models import (
@@ -176,7 +177,7 @@ async def ensure_sso_connection(session, enterprise: Enterprise) -> None:
             provider=settings.oidc_provider,
             issuer_url=settings.oidc_issuer_url,
             client_id=settings.oidc_client_id,
-            client_secret_encrypted=settings.oidc_client_secret,
+            client_secret_encrypted=encrypt_secret(settings.oidc_client_secret),
             redirect_uri=settings.oidc_redirect_uri,
             enabled=True,
         )
@@ -184,7 +185,7 @@ async def ensure_sso_connection(session, enterprise: Enterprise) -> None:
     else:
         connection.issuer_url = settings.oidc_issuer_url
         connection.client_id = settings.oidc_client_id
-        connection.client_secret_encrypted = settings.oidc_client_secret
+        connection.client_secret_encrypted = encrypt_secret(settings.oidc_client_secret)
         connection.redirect_uri = settings.oidc_redirect_uri
         connection.enabled = True
 

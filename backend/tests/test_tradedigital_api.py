@@ -364,5 +364,33 @@ def test_oidc_discovery_ignores_proxy_environment(monkeypatch):
     assert captured["url"].endswith("/.well-known/openid-configuration")
 
 
+def test_create_role_generates_uuid_primary_key():
+    with authenticated_client("admin@tradedigital.local") as client:
+        code = f"analyst_{uuid.uuid4().hex[:8]}"
+        response = client.post(
+            "/api/v1/platform/roles",
+            json={"code": code, "name": "Data Analyst"},
+        )
+        assert response.status_code == 200
+        data = response.json()["data"]
+        # The primary key must be a generated UUID, not the (per-enterprise) code,
+        # otherwise two enterprises reusing a code would collide on the global PK.
+        assert data["code"] == code
+        assert data["id"] != code
+        assert uuid.UUID(data["id"])
+
+
+def test_client_secret_encryption_round_trip():
+    from tradedigital.core.crypto import decrypt_secret, encrypt_secret
+
+    secret = "super-secret-value"
+    encrypted = encrypt_secret(secret)
+    assert encrypted != secret
+    assert encrypted.startswith("enc:v1:")
+    assert decrypt_secret(encrypted) == secret
+    # Legacy plaintext (no prefix) must pass through unchanged for backward compat.
+    assert decrypt_secret(secret) == secret
+
+
 def teardown_module() -> None:
     asyncio.run(engine.dispose())

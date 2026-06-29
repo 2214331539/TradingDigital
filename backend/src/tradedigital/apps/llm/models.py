@@ -99,8 +99,12 @@ class Conversation(Base, TimestampMixin):
     last_message_at: Mapped[object | None] = mapped_column(DateTime(timezone=True), nullable=True)
     deleted_at: Mapped[object | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
+    # Loaded on demand only: list endpoints never touch ``messages`` and would
+    # otherwise eagerly fetch every message of every conversation in the page.
+    # Code paths that need messages (e.g. get_owned_conversation) opt in with an
+    # explicit selectinload(Conversation.messages).
     messages: Mapped[list["Message"]] = relationship(
-        "Message", back_populates="conversation", order_by="Message.created_at", lazy="selectin"
+        "Message", back_populates="conversation", order_by="Message.created_at", lazy="select"
     )
 
 
