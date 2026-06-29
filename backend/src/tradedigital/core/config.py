@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     app_env: str = "development"
     debug: bool = True
 
-    frontend_url: str = "http://127.0.0.1:5173"
+    frontend_url: str = "http://127.0.0.1:5273"
     backend_url: str = "http://127.0.0.1:8000"
     database_url: str = "postgresql+asyncpg://tradedigital:tradedigital@127.0.0.1:5432/tradedigital"
 
@@ -40,7 +40,7 @@ class Settings(BaseSettings):
     default_model_temperature: float = 0.7
 
     cors_origins: List[str] = Field(
-        default_factory=lambda: ["http://localhost:5173", "http://127.0.0.1:5173"]
+        default_factory=lambda: ["http://localhost:5273", "http://127.0.0.1:5273"]
     )
 
     @property
