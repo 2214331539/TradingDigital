@@ -2,11 +2,11 @@ from sqlalchemy import Select, and_, exists, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from tradedigital.apps.llm.models import (
+from tradedigital.apps.llm.domain.models import (
     AssistantPreset,
     Conversation,
-    LlmProject,
     LlmModel,
+    LlmProject,
     Message,
     llm_model_role_grants,
 )

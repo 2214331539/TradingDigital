@@ -6,7 +6,7 @@ from typing import Optional
 from dotenv import dotenv_values, find_dotenv
 from openai import APIConnectionError, APIStatusError, APITimeoutError, AsyncOpenAI
 
-from tradedigital.apps.llm.models import LlmModel, Message
+from tradedigital.apps.llm.domain.models import LlmModel, Message
 
 
 class ModelGatewayError(RuntimeError):

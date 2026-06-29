@@ -1,3 +1,11 @@
+"""LLM ORM models.
+
+Cross-module references (enterprise_id, user_id, role_id) are stored as plain
+indexed strings — *logical* foreign keys — with no DB-level FK constraint to the
+platform tables. This keeps the LLM module self-contained and ready to be split
+into its own database/service. Intra-module relationships keep real FKs.
+"""
+
 import uuid
 
 from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, JSON, Numeric, String, Table, Text
@@ -15,7 +23,8 @@ llm_model_role_grants = Table(
     "llm_model_role_grants",
     Base.metadata,
     Column("model_id", String(36), ForeignKey("llm_models.id"), primary_key=True),
-    Column("role_id", String(36), ForeignKey("iam_roles.id"), primary_key=True),
+    # role_id is a logical reference to platform iam_roles (no FK constraint).
+    Column("role_id", String(36), primary_key=True),
     Column("created_at", DateTime(timezone=True), default=utc_now, nullable=False),
 )
 
@@ -49,14 +58,12 @@ class AssistantPreset(Base, TimestampMixin):
     __tablename__ = "llm_assistant_presets"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uuid_str)
-    enterprise_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("core_enterprises.id"), index=True, nullable=False
-    )
+    enterprise_id: Mapped[str] = mapped_column(String(36), index=True, nullable=False)
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     system_prompt: Mapped[str] = mapped_column(Text, nullable=False)
     visibility: Mapped[str] = mapped_column(String(32), default="enterprise", nullable=False)
-    created_by: Mapped[str | None] = mapped_column(String(36), ForeignKey("iam_users.id"), nullable=True)
+    created_by: Mapped[str | None] = mapped_column(String(36), nullable=True)
     default_model_id: Mapped[str | None] = mapped_column(String(36), ForeignKey("llm_models.id"), nullable=True)
     icon: Mapped[str | None] = mapped_column(String(64), nullable=True)
     enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
@@ -66,10 +73,8 @@ class LlmProject(Base, TimestampMixin):
     __tablename__ = "llm_projects"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uuid_str)
-    enterprise_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("core_enterprises.id"), index=True, nullable=False
-    )
-    user_id: Mapped[str] = mapped_column(String(36), ForeignKey("iam_users.id"), index=True, nullable=False)
+    enterprise_id: Mapped[str] = mapped_column(String(36), index=True, nullable=False)
+    user_id: Mapped[str] = mapped_column(String(36), index=True, nullable=False)
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     color: Mapped[str | None] = mapped_column(String(32), nullable=True)
@@ -82,10 +87,8 @@ class Conversation(Base, TimestampMixin):
     __tablename__ = "llm_conversations"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uuid_str)
-    enterprise_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("core_enterprises.id"), index=True, nullable=False
-    )
-    user_id: Mapped[str] = mapped_column(String(36), ForeignKey("iam_users.id"), index=True, nullable=False)
+    enterprise_id: Mapped[str] = mapped_column(String(36), index=True, nullable=False)
+    user_id: Mapped[str] = mapped_column(String(36), index=True, nullable=False)
     title: Mapped[str] = mapped_column(String(255), default="新聊天", nullable=False)
     assistant_preset_id: Mapped[str | None] = mapped_column(
         String(36), ForeignKey("llm_assistant_presets.id"), nullable=True
@@ -102,8 +105,6 @@ class Conversation(Base, TimestampMixin):
 
     # Loaded on demand only: list endpoints never touch ``messages`` and would
     # otherwise eagerly fetch every message of every conversation in the page.
-    # Code paths that need messages (e.g. get_owned_conversation) opt in with an
-    # explicit selectinload(Conversation.messages).
     messages: Mapped[list["Message"]] = relationship(
         "Message", back_populates="conversation", order_by="Message.created_at", lazy="select"
     )
@@ -113,13 +114,11 @@ class Message(Base, TimestampMixin):
     __tablename__ = "llm_messages"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uuid_str)
-    enterprise_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("core_enterprises.id"), index=True, nullable=False
-    )
+    enterprise_id: Mapped[str] = mapped_column(String(36), index=True, nullable=False)
     conversation_id: Mapped[str] = mapped_column(
         String(36), ForeignKey("llm_conversations.id"), index=True, nullable=False
     )
-    user_id: Mapped[str | None] = mapped_column(String(36), ForeignKey("iam_users.id"), nullable=True)
+    user_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
     role: Mapped[str] = mapped_column(String(32), nullable=False)
     content: Mapped[str] = mapped_column(Text, default="", nullable=False)
     metadata_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
@@ -134,10 +133,8 @@ class LlmModelCallLog(Base):
     __tablename__ = "llm_model_call_logs"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uuid_str)
-    enterprise_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("core_enterprises.id"), index=True, nullable=False
-    )
-    user_id: Mapped[str] = mapped_column(String(36), ForeignKey("iam_users.id"), index=True, nullable=False)
+    enterprise_id: Mapped[str] = mapped_column(String(36), index=True, nullable=False)
+    user_id: Mapped[str] = mapped_column(String(36), index=True, nullable=False)
     conversation_id: Mapped[str | None] = mapped_column(
         String(36), ForeignKey("llm_conversations.id"), nullable=True
     )

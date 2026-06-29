@@ -1,16 +1,18 @@
-"""create platform tables
+"""platform baseline (enterprises, iam, audit)
 
-Revision ID: 0001_create_platform_tables
+Revision ID: platform_0001_baseline
 Revises:
-Create Date: 2026-06-28
+Create Date: 2026-06-29
+
+Branch: platform
 """
 
 from alembic import op
 import sqlalchemy as sa
 
-revision = "0001_create_platform_tables"
+revision = "platform_0001_baseline"
 down_revision = None
-branch_labels = None
+branch_labels = ("platform",)
 depends_on = None
 
 
@@ -185,4 +187,3 @@ def downgrade() -> None:
     op.drop_table("core_app_settings")
     op.drop_index("ix_core_enterprises_code", table_name="core_enterprises")
     op.drop_table("core_enterprises")
-

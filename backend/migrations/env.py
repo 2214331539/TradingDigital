@@ -4,7 +4,7 @@ from alembic import context
 from sqlalchemy import pool
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
-from tradedigital.apps.llm import models as llm_models  # noqa: F401
+from tradedigital.apps.llm.domain import models as llm_models  # noqa: F401
 from tradedigital.apps.knowledge import models as knowledge_models  # noqa: F401
 from tradedigital.core.config import get_settings
 from tradedigital.core.database import Base

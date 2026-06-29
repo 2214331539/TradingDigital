@@ -1,4 +1,12 @@
-from tradedigital.apps.llm.models import AssistantPreset, Conversation, LlmModel, LlmProject, Message
+"""Map ORM entities to API response dicts (presenters)."""
+
+from tradedigital.apps.llm.domain.models import (
+    AssistantPreset,
+    Conversation,
+    LlmModel,
+    LlmProject,
+    Message,
+)
 
 
 def model_out(model: LlmModel) -> dict:

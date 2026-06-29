@@ -18,7 +18,7 @@ os.environ["TEST_MODEL_API_KEY"] = "test-key"
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from tradedigital.apps.llm.models import LlmModel, llm_model_role_grants  # noqa: E402
+from tradedigital.apps.llm.domain.models import LlmModel, llm_model_role_grants  # noqa: E402
 from tradedigital.apps.knowledge import models as knowledge_models  # noqa: F401, E402
 from tradedigital.core.database import AsyncSessionLocal, Base, engine  # noqa: E402
 from tradedigital.core.time import utc_now  # noqa: E402
@@ -300,7 +300,7 @@ def test_message_feedback_updates_metadata():
 
             user = await session.scalar(select(User).where(User.email == "employee@tradedigital.local"))
             assert user
-            from tradedigital.apps.llm.models import Conversation, Message
+            from tradedigital.apps.llm.domain.models import Conversation, Message
 
             conversation = Conversation(
                 enterprise_id=user.enterprise_id,

@@ -168,7 +168,7 @@ info "Preparing backend dependencies..."
 (cd "$BACKEND_DIR" && uv sync)
 
 info "Applying database migrations..."
-(cd "$BACKEND_DIR" && uv run alembic upgrade head)
+(cd "$BACKEND_DIR" && uv run alembic upgrade heads)
 
 info "Seeding database..."
 (cd "$BACKEND_DIR" && uv run python -m tradedigital.scripts.seed)

@@ -3,7 +3,7 @@ import uuid
 
 from sqlalchemy import delete, insert, select
 
-from tradedigital.apps.llm.models import AssistantPreset, LlmModel, llm_model_role_grants
+from tradedigital.apps.llm.domain.models import AssistantPreset, LlmModel, llm_model_role_grants
 from tradedigital.core.config import get_settings
 from tradedigital.core.crypto import encrypt_secret
 from tradedigital.core.database import AsyncSessionLocal, engine
