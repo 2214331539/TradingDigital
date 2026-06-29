@@ -1,4 +1,4 @@
-import { Archive, Image, MoreHorizontal, PanelLeftOpen, PenLine, Pin, Search, Share, Trash2, X } from 'lucide-react'
+import { Image, PanelLeftOpen, PenLine, Search, Share, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import {
   createProject,
@@ -159,27 +159,6 @@ export function LlmPage() {
     )
   }
 
-  async function togglePin() {
-    if (!current) return
-    const updated = await updateConversation(current.id, { pinned: !current.pinned })
-    setCurrent(updated)
-    reloadConversations()
-  }
-
-  async function archiveCurrent() {
-    if (!current) return
-    await updateConversation(current.id, { archived: true })
-    newChat()
-    reloadConversations()
-  }
-
-  async function removeCurrent() {
-    if (!current) return
-    await deleteConversation(current.id)
-    newChat()
-    reloadConversations()
-  }
-
   async function renameConversation(conversation: Conversation, title: string) {
     const updated = await updateConversation(conversation.id, { title })
     if (current?.id === updated.id) setCurrent(updated)
@@ -240,17 +219,6 @@ export function LlmPage() {
       setMessages([])
     }
     reloadProjects()
-    reloadConversations()
-  }
-
-  async function moveCurrentToProject(projectId: string | null) {
-    if (!current) {
-      setActiveProjectId(projectId)
-      return
-    }
-    const updated = await updateConversation(current.id, { project_id: projectId })
-    setCurrent(updated)
-    setActiveProjectId(updated.project_id)
     reloadConversations()
   }
 
@@ -339,35 +307,13 @@ export function LlmPage() {
           </div>
           <ModelSelector models={models} selectedModel={selectedModel} onSelect={setSelectedModel} />
           {activeProject ? <span className="temp-chip">{activeProject.name}</span> : null}
-          {current ? (
-            <div className="header-actions">
-              <ThemeToggle />
-              <button className="share-button" title="分享">
-                <Share size={16} />
-                Share
-              </button>
-              <button className="icon-button" onClick={togglePin} title="置顶">
-                <Pin size={17} fill={current.pinned ? 'currentColor' : 'none'} />
-              </button>
-              <button className="icon-button" onClick={archiveCurrent} title="归档">
-                <Archive size={17} />
-              </button>
-              <button className="icon-button danger" onClick={removeCurrent} title="删除">
-                <Trash2 size={17} />
-              </button>
-              <button className="icon-button" title="更多">
-                <MoreHorizontal size={18} />
-              </button>
-            </div>
-          ) : (
-            <div className="header-actions">
-              <ThemeToggle />
-              <button className="share-button" title="分享">
-                <Share size={16} />
-                Share
-              </button>
-            </div>
-          )}
+          <div className="header-actions">
+            <ThemeToggle />
+            <button className="share-button" title="分享">
+              <Share size={16} />
+              Share
+            </button>
+          </div>
         </header>
 
         <section className="message-scroll">
@@ -409,22 +355,6 @@ export function LlmPage() {
             </div>
           ) : null}
           <p className="composer-note">llm can make mistakes. Check important info.</p>
-          {projects.length > 0 ? (
-            <label className="project-attach">
-              <span>Project</span>
-              <select
-                value={current?.project_id ?? activeProjectId ?? ''}
-                onChange={(event) => moveCurrentToProject(event.target.value || null)}
-              >
-                <option value="">No project</option>
-                {projects.map((project) => (
-                  <option value={project.id} key={project.id}>
-                    {project.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-          ) : null}
         </footer>
       </main>
       )}
