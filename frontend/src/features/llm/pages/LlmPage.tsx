@@ -177,6 +177,30 @@ export function LlmPage() {
     reloadConversations()
   }
 
+  async function renameConversation(conversation: Conversation, title: string) {
+    const updated = await updateConversation(conversation.id, { title })
+    if (current?.id === updated.id) setCurrent(updated)
+    reloadConversations()
+  }
+
+  async function togglePinConversation(conversation: Conversation) {
+    const updated = await updateConversation(conversation.id, { pinned: !conversation.pinned })
+    if (current?.id === updated.id) setCurrent(updated)
+    reloadConversations()
+  }
+
+  async function archiveConversation(conversation: Conversation) {
+    await updateConversation(conversation.id, { archived: true })
+    if (current?.id === conversation.id) newChat()
+    reloadConversations()
+  }
+
+  async function removeConversation(conversation: Conversation) {
+    await deleteConversation(conversation.id)
+    if (current?.id === conversation.id) newChat()
+    reloadConversations()
+  }
+
   async function createProjectFromSidebar() {
     const name = window.prompt('Project name')
     if (!name?.trim()) return
@@ -239,6 +263,10 @@ export function LlmPage() {
         onProjectSelect={selectProject}
         onCreateProject={createProjectFromSidebar}
         onToggleSidebar={() => setSidebarOpen(false)}
+        onRename={renameConversation}
+        onTogglePin={togglePinConversation}
+        onArchive={archiveConversation}
+        onDelete={removeConversation}
         auth={auth}
         onLogout={logout}
       />
