@@ -10,12 +10,14 @@ import {
   streamChat,
   updateConversation,
   updateMessage,
+  updateProject,
 } from '../api'
 import { useAuth } from '../../../app/providers/auth-context'
 import { ChatInput } from '../components/ChatInput'
 import { ChatMessageList } from '../components/ChatMessageList'
 import { ChatSidebar } from '../components/ChatSidebar'
 import { ModelSelector } from '../components/ModelSelector'
+import { ProjectView } from '../components/ProjectView'
 import { ThemeToggle } from '../../../shared/components/ThemeToggle'
 import type { Conversation, LlmProject, Message, ModelInfo } from '../../../shared/types'
 
@@ -78,6 +80,7 @@ export function LlmPage() {
     setMessages([])
     setInput('')
     setError('')
+    setActiveProjectId(null)
     if (window.innerWidth <= 980) setSidebarOpen(false)
   }
 
@@ -205,18 +208,39 @@ export function LlmPage() {
     const name = window.prompt('Project name')
     if (!name?.trim()) return
     const project = await createProject({ name: name.trim() })
-    setProjects((prev) => [project, ...prev])
-    setActiveProjectId(project.id)
-    newChat()
+    await reloadProjects()
+    selectProject(project)
   }
 
   function selectProject(project: LlmProject) {
     setActiveProjectId(project.id)
     setCurrent(null)
     setMessages([])
-    setSearch('')
+    setInput('')
     setError('')
     if (window.innerWidth <= 980) setSidebarOpen(false)
+  }
+
+  async function toggleProjectPin(project: LlmProject) {
+    await updateProject(project.id, { pinned: !project.pinned })
+    reloadProjects()
+  }
+
+  async function renameProject(project: LlmProject, name: string) {
+    await updateProject(project.id, { name })
+    reloadProjects()
+  }
+
+  async function removeProject(project: LlmProject) {
+    if (!window.confirm(`删除项目「${project.name}」？项目内的会话不会被删除。`)) return
+    await updateProject(project.id, { archived: true })
+    if (activeProjectId === project.id) {
+      setActiveProjectId(null)
+      setCurrent(null)
+      setMessages([])
+    }
+    reloadProjects()
+    reloadConversations()
   }
 
   async function moveCurrentToProject(projectId: string | null) {
@@ -245,10 +269,11 @@ export function LlmPage() {
     await sendContent(previousUser.content)
   }
 
-  // The sidebar always shows the full set: pinned, each project with its nested
-  // chats, and the "Chats" list (conversations without a project). The active
-  // project only decides where a new chat is saved — it must not hide history.
+  // The sidebar shows three sections — Pinned Chats, Projects, Chats — and the
+  // active project decides where a new chat is saved. When a project is active
+  // with no open conversation, the main area becomes the project landing view.
   const activeProject = projects.find((project) => project.id === activeProjectId)
+  const showProjectView = Boolean(activeProject) && !current && messages.length === 0
 
   return (
     <div className="chat-layout llm-page" data-sidebar={sidebarOpen ? 'open' : 'closed'}>
@@ -256,12 +281,17 @@ export function LlmPage() {
         conversations={conversations}
         projects={projects}
         currentId={current?.id ?? null}
+        activeProjectId={activeProjectId}
         search={search}
         onSearch={setSearch}
         onNewChat={newChat}
         onSelect={selectConversation}
         onProjectSelect={selectProject}
+        onProjectNewChat={selectProject}
         onCreateProject={createProjectFromSidebar}
+        onProjectTogglePin={toggleProjectPin}
+        onProjectRename={renameProject}
+        onProjectDelete={removeProject}
         onToggleSidebar={() => setSidebarOpen(false)}
         onRename={renameConversation}
         onTogglePin={togglePinConversation}
@@ -270,6 +300,31 @@ export function LlmPage() {
         auth={auth}
         onLogout={logout}
       />
+      {showProjectView && activeProject ? (
+        <main className="chat-main is-project">
+          {!sidebarOpen ? (
+            <button className="icon-button sidebar-open-button floating" onClick={() => setSidebarOpen(true)} title="展开边栏">
+              <PanelLeftOpen size={18} />
+            </button>
+          ) : null}
+          <ProjectView
+            project={activeProject}
+            conversations={conversations}
+            input={input}
+            generating={generating}
+            onInput={setInput}
+            onSend={sendMessage}
+            onStop={stopGeneration}
+            onSelect={selectConversation}
+            onTogglePin={toggleProjectPin}
+            onRename={(project) => {
+              const name = window.prompt('Rename project', project.name)
+              if (name?.trim()) renameProject(project, name.trim())
+            }}
+            onDelete={removeProject}
+          />
+        </main>
+      ) : (
       <main className={`chat-main ${messages.length === 0 ? 'is-empty' : 'has-chat'}`}>
         <header className="chat-header">
           {!sidebarOpen ? (
@@ -372,6 +427,7 @@ export function LlmPage() {
           ) : null}
         </footer>
       </main>
+      )}
     </div>
   )
 }

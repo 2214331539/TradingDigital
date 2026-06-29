@@ -107,6 +107,7 @@ export type LlmProject = {
   name: string
   description: string | null
   color: string | null
+  pinned: boolean
   archived: boolean
   created_at: string
   updated_at: string

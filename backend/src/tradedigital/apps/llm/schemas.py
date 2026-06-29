@@ -50,6 +50,7 @@ class ProjectUpdate(BaseModel):
     name: Optional[str] = Field(default=None, min_length=1, max_length=100)
     description: Optional[str] = None
     color: Optional[str] = Field(default=None, max_length=32)
+    pinned: Optional[bool] = None
     archived: Optional[bool] = None
 
 

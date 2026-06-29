@@ -1,6 +1,7 @@
 import {
   Archive,
   ArrowLeft,
+  ChevronRight,
   Folder,
   LogOut,
   MoreHorizontal,
@@ -18,59 +19,23 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import type { AuthMe, Conversation, LlmProject } from '../../../shared/types'
 
-const DAY = 86400000
-
-function startOfTodayMs(): number {
-  const date = new Date()
-  date.setHours(0, 0, 0, 0)
-  return date.getTime()
-}
-
-function conversationTime(conversation: Conversation): number {
-  const raw = conversation.last_message_at ?? conversation.updated_at ?? conversation.created_at
-  const time = raw ? new Date(raw).getTime() : Number.NaN
-  return Number.isNaN(time) ? 0 : time
-}
-
-// Mirror ChatGPT's history buckets: Today / Yesterday / Previous 7 Days /
-// Previous 30 Days / then month (with year once it differs from the current one).
-function bucketFor(conversation: Conversation): { order: number; label: string } {
-  const time = conversationTime(conversation)
-  const today = startOfTodayMs()
-  if (time >= today) return { order: 0, label: 'Today' }
-  if (time >= today - DAY) return { order: 1, label: 'Yesterday' }
-  if (time >= today - 7 * DAY) return { order: 2, label: 'Previous 7 Days' }
-  if (time >= today - 30 * DAY) return { order: 3, label: 'Previous 30 Days' }
-  const date = new Date(time)
-  const ref = new Date()
-  const monthsAgo = (ref.getFullYear() - date.getFullYear()) * 12 + (ref.getMonth() - date.getMonth())
-  const month = date.toLocaleString('en-US', { month: 'long' })
-  const label = date.getFullYear() === ref.getFullYear() ? month : `${month} ${date.getFullYear()}`
-  return { order: 4 + monthsAgo, label }
-}
-
-function groupByTime(items: Conversation[]): { label: string; items: Conversation[] }[] {
-  const sorted = [...items].sort((a, b) => conversationTime(b) - conversationTime(a))
-  const groups = new Map<string, { order: number; label: string; items: Conversation[] }>()
-  for (const conversation of sorted) {
-    const bucket = bucketFor(conversation)
-    const group = groups.get(bucket.label) ?? { order: bucket.order, label: bucket.label, items: [] }
-    group.items.push(conversation)
-    groups.set(bucket.label, group)
-  }
-  return [...groups.values()].sort((a, b) => a.order - b.order)
-}
+const PROJECTS_VISIBLE = 6
 
 export function ChatSidebar({
   conversations,
   projects,
   currentId,
+  activeProjectId,
   search,
   onSearch,
   onNewChat,
   onSelect,
   onProjectSelect,
+  onProjectNewChat,
   onCreateProject,
+  onProjectTogglePin,
+  onProjectRename,
+  onProjectDelete,
   onToggleSidebar,
   onRename,
   onTogglePin,
@@ -82,12 +47,17 @@ export function ChatSidebar({
   conversations: Conversation[]
   projects: LlmProject[]
   currentId: string | null
+  activeProjectId: string | null
   search: string
   onSearch: (value: string) => void
   onNewChat: () => void
   onSelect: (conversation: Conversation) => void
   onProjectSelect: (project: LlmProject) => void
+  onProjectNewChat: (project: LlmProject) => void
   onCreateProject: () => void
+  onProjectTogglePin: (project: LlmProject) => void
+  onProjectRename: (project: LlmProject, name: string) => void
+  onProjectDelete: (project: LlmProject) => void
   onToggleSidebar: () => void
   onRename: (conversation: Conversation, title: string) => void
   onTogglePin: (conversation: Conversation) => void
@@ -99,6 +69,8 @@ export function ChatSidebar({
   const [menuId, setMenuId] = useState<string | null>(null)
   const [renamingId, setRenamingId] = useState<string | null>(null)
   const [renameValue, setRenameValue] = useState('')
+  const [open, setOpen] = useState({ pinned: true, projects: true, chats: true })
+  const [showAllProjects, setShowAllProjects] = useState(false)
 
   useEffect(() => {
     if (!menuId) return
@@ -107,43 +79,51 @@ export function ChatSidebar({
     return () => window.removeEventListener('click', close)
   }, [menuId])
 
-  const pinned = conversations.filter((conversation) => conversation.pinned)
+  const pinnedChats = conversations.filter((conversation) => conversation.pinned)
   const projectConversationIds = new Set(
     conversations.filter((conversation) => conversation.project_id).map((conversation) => conversation.id),
   )
-  const history = conversations.filter(
+  const chats = conversations.filter(
     (conversation) => !conversation.pinned && !projectConversationIds.has(conversation.id),
   )
-  const historyGroups = groupByTime(history)
+  const visibleProjects = showAllProjects ? projects : projects.slice(0, PROJECTS_VISIBLE)
 
-  function startRename(conversation: Conversation) {
+  function toggle(section: 'pinned' | 'projects' | 'chats') {
+    setOpen((value) => ({ ...value, [section]: !value[section] }))
+  }
+
+  function startRename(id: string, value: string) {
     setMenuId(null)
-    setRenamingId(conversation.id)
-    setRenameValue(conversation.title)
+    setRenamingId(id)
+    setRenameValue(value)
   }
 
-  function commitRename(conversation: Conversation) {
-    const next = renameValue.trim()
-    if (next && next !== conversation.title) onRename(conversation, next)
-    setRenamingId(null)
+  function renameInput(commit: () => void) {
+    return (
+      <input
+        className="conversation-rename"
+        autoFocus
+        value={renameValue}
+        onChange={(event) => setRenameValue(event.target.value)}
+        onClick={(event) => event.stopPropagation()}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter') commit()
+          if (event.key === 'Escape') setRenamingId(null)
+        }}
+        onBlur={commit}
+      />
+    )
   }
 
-  function item(conversation: Conversation, nested = false) {
+  function chatItem(conversation: Conversation, nested = false) {
     if (renamingId === conversation.id) {
       return (
         <div className={`conversation-item ${nested ? 'nested' : ''}`} key={conversation.id}>
-          <input
-            className="conversation-rename"
-            autoFocus
-            value={renameValue}
-            onChange={(event) => setRenameValue(event.target.value)}
-            onClick={(event) => event.stopPropagation()}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter') commitRename(conversation)
-              if (event.key === 'Escape') setRenamingId(null)
-            }}
-            onBlur={() => commitRename(conversation)}
-          />
+          {renameInput(() => {
+            const next = renameValue.trim()
+            if (next && next !== conversation.title) onRename(conversation, next)
+            setRenamingId(null)
+          })}
         </div>
       )
     }
@@ -153,7 +133,6 @@ export function ChatSidebar({
         key={conversation.id}
       >
         <button className="conversation-open" onClick={() => onSelect(conversation)} title={conversation.title}>
-          {conversation.pinned ? <Pin size={13} className="pin-indicator" fill="currentColor" /> : null}
           <span>{conversation.title}</span>
         </button>
         <div className="conversation-tools">
@@ -173,7 +152,7 @@ export function ChatSidebar({
                 {conversation.pinned ? <PinOff size={15} /> : <Pin size={15} />}
                 {conversation.pinned ? 'Unpin' : 'Pin'}
               </button>
-              <button onClick={() => startRename(conversation)}>
+              <button onClick={() => startRename(conversation.id, conversation.title)}>
                 <PenLine size={15} />
                 Rename
               </button>
@@ -196,6 +175,78 @@ export function ChatSidebar({
     )
   }
 
+  function projectRow(project: LlmProject) {
+    const children = conversations.filter((conversation) => conversation.project_id === project.id)
+    const isActive = activeProjectId === project.id
+    const menuKey = `project:${project.id}`
+    return (
+      <div className="project-group" key={project.id}>
+        <div className={`conversation-item project-item ${isActive ? 'active' : ''} ${menuId === menuKey ? 'menu-open' : ''}`}>
+          {renamingId === menuKey ? (
+            renameInput(() => {
+              const next = renameValue.trim()
+              if (next && next !== project.name) onProjectRename(project, next)
+              setRenamingId(null)
+            })
+          ) : (
+            <>
+              <button className="conversation-open" onClick={() => onProjectSelect(project)} title={project.name}>
+                <Folder size={17} className="project-icon" />
+                <span>{project.name}</span>
+                {project.pinned ? <Pin size={12} className="pin-indicator" fill="currentColor" /> : null}
+              </button>
+              <div className="conversation-tools">
+                <button
+                  className="conversation-more"
+                  title="在该项目中新建会话"
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    onProjectNewChat(project)
+                  }}
+                >
+                  <Plus size={16} />
+                </button>
+                <button
+                  className="conversation-more"
+                  title="项目选项"
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    setMenuId((value) => (value === menuKey ? null : menuKey))
+                  }}
+                >
+                  <MoreHorizontal size={16} />
+                </button>
+                {menuId === menuKey ? (
+                  <div className="chat-item-menu" onClick={(event) => event.stopPropagation()}>
+                    <button onClick={() => { onProjectNewChat(project); setMenuId(null) }}>
+                      <SquarePen size={15} />
+                      New chat
+                    </button>
+                    <button onClick={() => { onProjectTogglePin(project); setMenuId(null) }}>
+                      {project.pinned ? <PinOff size={15} /> : <Pin size={15} />}
+                      {project.pinned ? 'Unpin' : 'Pin'}
+                    </button>
+                    <button onClick={() => startRename(menuKey, project.name)}>
+                      <PenLine size={15} />
+                      Rename
+                    </button>
+                    <button className="danger" onClick={() => { onProjectDelete(project); setMenuId(null) }}>
+                      <Trash2 size={15} />
+                      Delete
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+            </>
+          )}
+        </div>
+        {isActive && children.length > 0 ? (
+          <div className="project-conversations">{children.map((child) => chatItem(child, true))}</div>
+        ) : null}
+      </div>
+    )
+  }
+
   return (
     <aside className="sidebar llm-sidebar">
       <div className="sidebar-top">
@@ -213,60 +264,67 @@ export function ChatSidebar({
         </button>
         <label className="sidebar-command search-command">
           <Search size={18} />
-          <input
-            placeholder="Search chats"
-            value={search}
-            onChange={(event) => onSearch(event.target.value)}
-          />
+          <input placeholder="Search chats" value={search} onChange={(event) => onSearch(event.target.value)} />
         </label>
       </div>
 
       <nav className="conversation-nav">
-        <div className="sidebar-block">
+        <section className="sidebar-block">
+          <button className="sidebar-block-head" onClick={() => toggle('pinned')}>
+            <span>Pinned Chats</span>
+            <ChevronRight size={15} className={`section-chevron ${open.pinned ? 'open' : ''}`} />
+          </button>
+          {open.pinned ? (
+            pinnedChats.length > 0 ? (
+              pinnedChats.map((conversation) => chatItem(conversation))
+            ) : (
+              <p className="history-empty">置顶的会话会出现在这里。</p>
+            )
+          ) : null}
+        </section>
+
+        <section className="sidebar-block">
           <div className="sidebar-block-head">
-            <span>Projects</span>
+            <button className="block-head-toggle" onClick={() => toggle('projects')}>
+              <span>Projects</span>
+              <ChevronRight size={15} className={`section-chevron ${open.projects ? 'open' : ''}`} />
+            </button>
             <button className="icon-button" onClick={onCreateProject} title="新建项目">
               <Plus size={16} />
             </button>
           </div>
-          {projects.length === 0 ? (
-            <button className="sidebar-command compact muted" onClick={onCreateProject}>
-              <Folder size={18} />
-              <span>New project</span>
-            </button>
-          ) : (
-            projects.map((project) => {
-              const children = conversations.filter((conversation) => conversation.project_id === project.id)
-              return (
-                <div className="project-group" key={project.id}>
-                  <button className="sidebar-command compact project-title" onClick={() => onProjectSelect(project)}>
-                    <Folder size={18} />
-                    <span>{project.name}</span>
+          {open.projects ? (
+            projects.length > 0 ? (
+              <>
+                <div className="projects-scroll">{visibleProjects.map((project) => projectRow(project))}</div>
+                {projects.length > PROJECTS_VISIBLE ? (
+                  <button className="sidebar-command muted show-more" onClick={() => setShowAllProjects((value) => !value)}>
+                    <span>{showAllProjects ? 'Show less' : 'Show more'}</span>
                   </button>
-                  <div className="project-conversations">{children.slice(0, 4).map((child) => item(child, true))}</div>
-                </div>
-              )
-            })
-          )}
-        </div>
+                ) : null}
+              </>
+            ) : (
+              <button className="sidebar-command compact muted" onClick={onCreateProject}>
+                <Folder size={18} />
+                <span>New project</span>
+              </button>
+            )
+          ) : null}
+        </section>
 
-        {pinned.length > 0 ? (
-          <div className="history-group">
-            <div className="history-group-label">Pinned</div>
-            {pinned.map((conversation) => item(conversation))}
-          </div>
-        ) : null}
-
-        {historyGroups.map((group) => (
-          <div className="history-group" key={group.label}>
-            <div className="history-group-label">{group.label}</div>
-            {group.items.map((conversation) => item(conversation))}
-          </div>
-        ))}
-
-        {history.length === 0 && pinned.length === 0 ? (
-          <p className="history-empty">还没有会话，开始一个新对话吧。</p>
-        ) : null}
+        <section className="sidebar-block">
+          <button className="sidebar-block-head" onClick={() => toggle('chats')}>
+            <span>Chats</span>
+            <ChevronRight size={15} className={`section-chevron ${open.chats ? 'open' : ''}`} />
+          </button>
+          {open.chats ? (
+            chats.length > 0 ? (
+              chats.map((conversation) => chatItem(conversation))
+            ) : (
+              <p className="history-empty">还没有会话，开始一个新对话吧。</p>
+            )
+          ) : null}
+        </section>
       </nav>
 
       <div className="sidebar-footer">

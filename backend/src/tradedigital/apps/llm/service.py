@@ -62,6 +62,7 @@ def project_out(project: LlmProject) -> dict:
         "name": project.name,
         "description": project.description,
         "color": project.color,
+        "pinned": project.pinned,
         "archived": project.archived,
         "created_at": project.created_at,
         "updated_at": project.updated_at,

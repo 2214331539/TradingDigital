@@ -149,7 +149,7 @@ async def list_projects(session: AsyncSession, ctx: AuthContext) -> list[LlmProj
             LlmProject.deleted_at.is_(None),
             LlmProject.archived.is_(False),
         )
-        .order_by(LlmProject.updated_at.desc(), LlmProject.name)
+        .order_by(LlmProject.pinned.desc(), LlmProject.updated_at.desc(), LlmProject.name)
     )
     return rows.all()
 

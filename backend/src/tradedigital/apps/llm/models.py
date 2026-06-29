@@ -73,6 +73,7 @@ class LlmProject(Base, TimestampMixin):
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     color: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    pinned: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     archived: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     deleted_at: Mapped[object | None] = mapped_column(DateTime(timezone=True), nullable=True)
 

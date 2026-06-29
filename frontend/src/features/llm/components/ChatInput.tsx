@@ -5,12 +5,14 @@ import type { KeyboardEvent } from 'react'
 export function ChatInput({
   value,
   generating,
+  placeholder = 'Ask anything',
   onChange,
   onSend,
   onStop,
 }: {
   value: string
   generating: boolean
+  placeholder?: string
   onChange: (value: string) => void
   onSend: () => void
   onStop: () => void
@@ -41,7 +43,7 @@ export function ChatInput({
       <textarea
         ref={textareaRef}
         value={value}
-        placeholder="Ask anything"
+        placeholder={placeholder}
         rows={1}
         onChange={(event) => onChange(event.target.value)}
         onKeyDown={onKeyDown}

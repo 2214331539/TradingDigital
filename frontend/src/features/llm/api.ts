@@ -75,7 +75,7 @@ export function createProject(payload: { name: string; description?: string; col
 
 export function updateProject(
   id: string,
-  payload: Partial<Pick<LlmProject, 'name' | 'description' | 'color' | 'archived'>>,
+  payload: Partial<Pick<LlmProject, 'name' | 'description' | 'color' | 'pinned' | 'archived'>>,
 ) {
   return request<LlmProject>(`/llm/projects/${id}`, {
     method: 'PATCH',
