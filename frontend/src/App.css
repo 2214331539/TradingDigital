@@ -948,11 +948,16 @@
   width: min(930px, calc(100% - 48px));
   margin: 0 auto 34px;
   display: flex;
+  flex-direction: column;
   gap: 0;
 }
 
 .message-row.user {
-  justify-content: flex-end;
+  align-items: flex-end;
+}
+
+.message-row.assistant {
+  align-items: flex-start;
 }
 
 .assistant-avatar {
@@ -965,6 +970,10 @@
   color: var(--text);
   line-height: 1.68;
   font-size: 18px;
+}
+
+.message-row.assistant .message-bubble {
+  width: 100%;
 }
 
 .message-row.user .message-bubble {

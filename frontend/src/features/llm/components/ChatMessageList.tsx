@@ -47,7 +47,8 @@ export function ChatMessageList({
             >
               {message.content || (message.status === 'streaming' ? ' ' : '')}
             </ReactMarkdown>
-            <div className="message-actions">
+          </div>
+          <div className="message-actions">
               {message.status === 'streaming' ? <span className="typing-dot" /> : null}
               {message.content ? (
                 <button title="复制" onClick={() => copyMessage(message)}>
@@ -78,7 +79,6 @@ export function ChatMessageList({
                   </button>
                 </>
               ) : null}
-            </div>
           </div>
         </article>
       ))}

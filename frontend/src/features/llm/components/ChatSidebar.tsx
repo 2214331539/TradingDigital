@@ -313,10 +313,15 @@ export function ChatSidebar({
         </section>
 
         <section className="sidebar-block">
-          <button className="sidebar-block-head" onClick={() => toggle('chats')}>
-            <span>Chats</span>
-            <ChevronRight size={15} className={`section-chevron ${open.chats ? 'open' : ''}`} />
-          </button>
+          <div className="sidebar-block-head">
+            <button className="block-head-toggle" onClick={() => toggle('chats')}>
+              <span>Chats</span>
+              <ChevronRight size={15} className={`section-chevron ${open.chats ? 'open' : ''}`} />
+            </button>
+            <button className="icon-button" onClick={onNewChat} title="新建会话">
+              <Plus size={16} />
+            </button>
+          </div>
           {open.chats ? (
             chats.length > 0 ? (
               chats.map((conversation) => chatItem(conversation))
